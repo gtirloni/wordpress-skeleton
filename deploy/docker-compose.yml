@@ -1,0 +1,63 @@
+version: '3.7'
+
+services:
+
+  # All containers share a single network namespace (like in Kubernetes pods)
+  code:
+    build:
+      dockerfile: deploy/Dockerfile-code
+      context: ../
+    command: 'sh -c "trap : TERM INT; tail -f /dev/null & wait"' # keep container running forever
+    env_file: ../.env
+    ports:
+      - ${HTTP_PORT}:80
+      - ${HTTPS_PORT}:443
+    volumes:
+      - code:/var/www/html
+
+  web:
+    build:
+      dockerfile: deploy/Dockerfile-web
+      context: ../
+    network_mode: service:code
+    volumes:
+      - code:/var/www/html
+    depends_on:
+      - db
+      - code
+      - app
+
+  app:
+    build:
+      dockerfile: deploy/Dockerfile-app
+      context: ../
+    network_mode: service:code
+    volumes:
+      - code:/var/www/html
+    depends_on:
+      - db
+      - code
+
+  db:
+    build:
+      dockerfile: deploy/Dockerfile-db
+      context: ../
+    env_file: ../.env
+    network_mode: service:code
+    volumes:
+      - db:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    healthcheck:
+      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+    depends_on:
+      - code
+
+volumes:
+  code:
+  db:

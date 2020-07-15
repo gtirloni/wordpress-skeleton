@@ -1,0 +1,4 @@
+FROM mariadb:10.5.4-focal
+
+# Placeholder in case modifications are needed (dev-only)
+#COPY ./deploy/files/mariadb/custom.conf /etc/mysql/conf.d/custom.conf
